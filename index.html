@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>KidStrong QBO — Connecting…</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #080c14;
+      color: #e2eaf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .box {
+      text-align: center;
+      padding: 48px 40px;
+      background: #141c2b;
+      border-radius: 16px;
+      border: 1px solid #1f2e48;
+      max-width: 440px;
+      width: 90%;
+    }
+    .logo { font-size: 42px; margin-bottom: 20px; }
+    h2 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+    p  { color: #7a91b4; font-size: 14px; line-height: 1.6; }
+    .status { margin-top: 24px; font-size: 13px; }
+    .ok   { color: #22c55e; }
+    .err  { color: #ef4444; }
+    .spin {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-top-color: #3d8ef0;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">🔐</div>
+  <h2>Connecting to QuickBooks…</h2>
+  <p>Completing authorization. This window will close automatically.</p>
+  <div class="status" id="status">
+    <span class="spin"></span> Sending authorization to your local dashboard…
+  </div>
+</div>
+
+<script>
+  // Read the auth code and state from Intuit's redirect
+  const params = new URLSearchParams(window.location.search);
+  const code    = params.get('code');
+  const state   = params.get('state');
+  const realmId = params.get('realmId');
+  const error   = params.get('error');
+
+  const statusEl = document.getElementById('status');
+
+  if (error) {
+    statusEl.innerHTML = `<span class="err">❌ Authorization failed: ${error}</span>`;
+  } else if (!code) {
+    statusEl.innerHTML = `<span class="err">❌ No authorization code received.</span>`;
+  } else {
+    // Forward the code to the local server
+    const localCallback = `http://localhost:3000/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state||'')}&realmId=${encodeURIComponent(realmId||'')}`;
+
+    fetch(localCallback)
+      .then(() => {
+        statusEl.innerHTML = `<span class="ok">✅ Connected! You can close this window.</span>`;
+        setTimeout(() => window.close(), 2000);
+      })
+      .catch(() => {
+        // fetch to localhost may get blocked by CORS — try redirect instead
+        window.location.href = localCallback;
+      });
+  }
+</script>
+</body>
+</html>
